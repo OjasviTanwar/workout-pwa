@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PPL Workout Planner</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#22c55e">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #020617;
+      --accent: #22c55e;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: linear-gradient(135deg, #020617, #0f172a);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 { text-align: center; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: var(--muted); margin-bottom: 24px; }
+
+    .days {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .day-btn {
+      padding: 12px;
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .day-btn.active {
+      background: var(--accent);
+      color: #020617;
+    }
+
+    .workout {
+      max-width: 900px;
+      margin: auto;
+      background: rgba(2,6,23,0.85);
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 24px;
+    }
+
+    .section { margin-bottom: 24px; }
+    .section h2 { color: var(--accent); margin-bottom: 12px; }
+
+    .exercise {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border-radius: 10px;
+      background: #020617;
+      border: 1px solid #1e293b;
+      margin-bottom: 10px;
+    }
+
+    .exercise.done { opacity: 0.5; text-decoration: line-through; }
+
+    .exercise button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .progress {
+      height: 10px;
+      background: #020617;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+    }
+
+    .progress div {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: 0.3s;
+    }
+
+    footer { text-align: center; margin-top: 24px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<h1>PPL Workout Planner</h1>
+<div class="subtitle">Mon – Sat • Complete Bodybuilder PPL • Hypertrophy</div>
+
+<div class="days" id="days"></div>
+<div class="workout" id="workout"></div>
+
+<footer>Auto-save • Offline • Analytics Enabled</footer>
+
+<div style="max-width:900px;margin:24px auto;color:#94a3b8;font-size:0.9rem">
+  <strong>Weekly Analytics</strong>
+  <div id="analytics"></div>
+</div>
+
+<script>
+  if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+
+/* ================= FULL BODYBUILDER PPL DATA ================= */
+const data = {
+  Mon: {
+    name: "Push (Chest + Shoulders + Triceps)",
+    sections: {
+      Chest: [
+        "Barbell Bench Press – 4×6–8",
+        "Incline Dumbbell Press – 3×8–10",
+        "Cable / Pec Deck Fly – 3×12–15"
+      ],
+      Shoulders: [
+        "Seated Dumbbell Shoulder Press – 3×8–10",
+        "Lateral Raises – 4×12–15"
+      ],
+      Triceps: [
+        "Cable Pushdowns – 3×10–12",
+        "Overhead Triceps Extension – 3×12–15"
+      ],
+      Cardio: ["20 min Incline Walk"]
+    }
+  },
+  Tue: {
+    name: "Pull (Back + Biceps)",
+    sections: {
+      Back: [
+        "Deadlift / Rack Pull – 3×5–6",
+        "Pull-ups / Lat Pulldown – 4×8–10",
+        "T-Bar Row – 3×8–10",
+        "Seated Cable Row – 3×10–12"
+      ],
+      RearDelts: ["Face Pulls – 3×12–15"],
+      Biceps: [
+        "Barbell Curl – 3×8–10",
+        "Hammer Curl – 3×10–12"
+      ],
+      Cardio: ["15–20 min Cycling"]
+    }
+  },
+  Wed: {
+    name: "Legs + Abs",
+    sections: {
+      Quads: [
+        "Barbell Back Squat – 4×6–8",
+        "Leg Press – 3×10–12"
+      ],
+      Hamstrings: [
+        "Romanian Deadlift – 3×8–10",
+        "Leg Curl – 3×12–15"
+      ],
+      Calves: ["Standing Calf Raises – 4×12–15"],
+      Abs: [
+        "Hanging Leg Raises – 3×10–15",
+        "Cable Crunch – 3×12–15"
+      ]
+    }
+  },
+  Thu: {
+    name: "Push (Hypertrophy Focus)",
+    sections: {
+      Chest: [
+        "Incline Barbell Press – 4×6–8",
+        "Dumbbell Flat Press – 3×8–10",
+        "Low-to-High Cable Fly – 3×12–15"
+      ],
+      Shoulders: [
+        "Arnold Press – 3×8–10",
+        "Lateral Raises (Drop Set) – 4×12–15"
+      ],
+      Triceps: [
+        "Skull Crushers – 3×8–10",
+        "Rope Pushdowns – 3×12–15"
+      ],
+      Cardio: ["20 min Incline Walk"]
+    }
+  },
+  Fri: {
+    name: "Pull + Abs",
+    sections: {
+      Back: [
+        "Barbell Row – 4×8–10",
+        "Wide-Grip Pulldown – 3×10–12",
+        "Single-Arm Dumbbell Row – 3×10–12"
+      ],
+      RearDelts: ["Reverse Pec Deck – 3×12–15"],
+      Biceps: [
+        "Preacher Curl – 3×10–12",
+        "Cable Curl – 3×12–15"
+      ],
+      Abs: [
+        "Decline Sit-ups – 3×12–15",
+        "Russian Twists – 3×20"
+      ],
+      Cardio: ["15 min Cycling / Stairmaster"]
+    }
+  },
+  Sat: {
+    name: "Legs + Abs",
+    sections: {
+      Quads: [
+        "Hack Squat / Front Squat – 4×6–8",
+        "Walking Lunges – 3×12/leg"
+      ],
+      Hamstrings: [
+        "Lying Leg Curl – 3×12–15",
+        "Hip Thrust – 3×8–10"
+      ],
+      Calves: ["Seated Calf Raises – 4×15–20"],
+      Abs: [
+        "Ab Wheel Rollouts – 3×10–12",
+        "Plank – 3×45–60 sec"
+      ],
+      Cardio: ["15–20 min Incline Walk (Optional)"]
+    }
+  }
+};
+
+/* ================= CORE LOGIC ================= */
+const daysEl = document.getElementById('days');
+const workoutEl = document.getElementById('workout');
+const analyticsEl = document.getElementById('analytics');
+
+function renderDays() {
+  daysEl.innerHTML = '';
+  Object.keys(data).forEach(day => {
+    const btn = document.createElement('button');
+    btn.className = 'day-btn';
+    btn.textContent = day;
+    btn.onclick = () => loadDay(day);
+    daysEl.appendChild(btn);
+  });
+}
+
+function loadDay(day) {
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  [...daysEl.children].find(b => b.textContent === day).classList.add('active');
+
+  workoutEl.innerHTML = `<h2>${day} – ${data[day].name}</h2>`;
+
+  let total = 0, done = 0;
+
+  Object.entries(data[day].sections).forEach(([section, exercises]) => {
+    const sec = document.createElement('div');
+    sec.className = 'section';
+    sec.innerHTML = `<h2>${section}</h2>`;
+
+    exercises.forEach(ex => {
+      total++;
+      const key = day + ex;
+      const isDone = localStorage.getItem(key);
+      if (isDone) done++;
+
+      const div = document.createElement('div');
+      div.className = 'exercise' + (isDone ? ' done' : '');
+      div.innerHTML = `<span>${ex}</span><button>${isDone ? 'Undo' : 'Done'}</button>`;
+
+      div.querySelector('button').onclick = () => {
+        if (localStorage.getItem(key)) localStorage.removeItem(key);
+        else localStorage.setItem(key, true);
+        loadDay(day);
+      };
+
+      sec.appendChild(div);
+    });
+
+    workoutEl.appendChild(sec);
+  });
+
+  const progress = document.createElement('div');
+  progress.className = 'progress';
+  progress.innerHTML = `<div style="width:${(done/total)*100}%"></div>`;
+  workoutEl.appendChild(progress);
+
+  updateAnalytics();
+}
+
+function updateAnalytics() {
+  let completedDays = 0, totalEx = 0, doneEx = 0;
+
+  Object.keys(data).forEach(day => {
+    let dayTotal = 0, dayDone = 0;
+    Object.values(data[day].sections).forEach(list => {
+      list.forEach(ex => {
+        dayTotal++; totalEx++;
+        if (localStorage.getItem(day + ex)) { dayDone++; doneEx++; }
+      });
+    });
+    if (dayDone === dayTotal && dayTotal > 0) completedDays++;
+  });
+
+  analyticsEl.innerHTML = `
+    Days fully completed: <b>${completedDays}/6</b><br>
+    Weekly completion: <b>${Math.round((doneEx/totalEx)*100)}%</b><br>
+    Consistency: <b>${completedDays >= 4 ? 'Good' : 'Needs Improvement'}</b>
+  `;
+}
+
+renderDays();
+loadDay('Mon');
+</script>
+
+</body>
+</html>
